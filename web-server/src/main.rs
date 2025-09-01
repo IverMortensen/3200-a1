@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::process::{exit, Command};
 use tiny_http::{Response, Server};
 
 fn run_script(script_path: &str) -> Result<String, String> {
@@ -20,13 +20,10 @@ fn main() {
     let listen_addr = server.server_addr();
 
     let port = match listen_addr {
-        tiny_http::ListenAddr::IP(socket_addr) => {
-            println!("Server running on port: {}", socket_addr.port());
-            socket_addr.port().to_string()
-        }
+        tiny_http::ListenAddr::IP(socket_addr) => socket_addr.port().to_string(),
         tiny_http::ListenAddr::Unix(_) => {
-            println!("Server running on Unix socket");
-            format!("Unix")
+            println!("Server running on Unix socket.");
+            exit(1);
         }
     };
 
