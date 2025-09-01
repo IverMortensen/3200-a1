@@ -25,7 +25,7 @@ echo "$selected_nodes" | while read -r node; do
         echo "Processing node: $node"
 
         temp_file="$temp_dir/${node}.out"
-        ssh imo059@"$node" "~/3200-a1/web-server/target/release/web-server" > "$temp_file" 2>&1 &
+        ssh "$USER"@"$node" "~/3200-a1/web-server/target/release/web-server" > "$temp_file" 2>&1 &
         # Store process output in temp file
         echo "$temp_file" >> "$temp_dir/temp_files.list"
     fi
