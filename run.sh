@@ -6,58 +6,49 @@ if [ $# -eq 0 ]; then
 fi
 
 num_nodes=$1
-node_file="active_nodes.txt"
-temp_dir=$(mktemp -d)
-host_ports=()
+target="$HOME/3200-a1/web-server/target/release/web-server"
+active_nodes_file="active_nodes.txt"
+stdout_dir="./stdout"
+mkdir -p "$stdout_dir"
+
+ports=()
 
 # Get available nodes
 all_nodes=$(/share/ifi/available-nodes.sh)
-selected_nodes=$(echo "$all_nodes" | head -"$num_nodes")
+readarray -t selected_nodes < <(echo "$all_nodes" | shuf -n "$num_nodes")
 
-echo "$selected_nodes" > "$node_file"
+# Store active nodes on disk for clean up script
+printf "%s\n" "${selected_nodes[@]}" >> "$active_nodes_file"
+
 echo "Selected nodes:"
-echo "$selected_nodes"
+printf "%s\n" "${selected_nodes[@]}"
 echo ""
 
-# Start the processes
-echo "$selected_nodes" | while read -r node; do
+# Start processes
+for node in "${selected_nodes[@]}"; do
     if [ -n "$node" ]; then
         echo "Processing node: $node"
-
-        temp_file="$temp_dir/${node}.out"
-        ssh "$USER"@"$node" "~/3200-a1/web-server/target/release/web-server" > "$temp_file" 2>&1 &
-        # Store process output in temp file
-        echo "$temp_file" >> "$temp_dir/temp_files.list"
+        port=$(shuf -i 49152-65535 -n1)
+        ports+=("$port")
+        ssh "$USER"@"$node" "$target" "$node" "$port" > "${stdout_dir}/${node}" 2>&1 &
     fi
 done
 
-echo "Done."
 echo ""
 
-sleep 2
-
 # Create and print the json output
-host_ports_json="["
-first=true
-
-while IFS= read -r temp_file; do
-    if [ -f "$temp_file" ]; then
-        # Get the host and port from output temp file
-        host_port=$(grep "Host:port" "$temp_file" | sed 's/Host:port //')
-        if [ -n "$host_port" ]; then
-            if [ "$first" = true ]; then
-                host_ports_json="${host_ports_json}\"${host_port}\""
-                first=false
-            else
-                host_ports_json="${host_ports_json}, \"${host_port}\""
-            fi
+json_output="["
+index=0
+for node in "${selected_nodes[@]}"; do
+    if [ -n "$node" ]; then
+        if [ "$index" = 0 ]; then
+            json_output="${json_output}\"${node}:${ports["$index"]}\""
+        else
+            json_output="${json_output}, \"${node}:${ports["$index"]}\""
         fi
+        ((index++))
     fi
-done < "$temp_dir/temp_files.list"
+done
+json_output="${json_output}]"
 
-host_ports_json="${host_ports_json}]"
-
-echo "$host_ports_json"
-
-# Clean up temporary files
-rm -rf "$temp_dir"
+echo "$json_output"
