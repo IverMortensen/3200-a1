@@ -1,25 +1,27 @@
-use gethostname::gethostname;
-use std::process::exit;
+use std::{env, process::exit};
 use tiny_http::{Response, Server};
 
 fn main() {
-    let server = Server::http("0.0.0.0:0").unwrap();
-    let listen_addr = server.server_addr();
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 3 {
+        eprintln!("Usage: {} <host> <port>", args[0]);
+        exit(1);
+    }
 
-    let port = match listen_addr {
-        tiny_http::ListenAddr::IP(socket_addr) => socket_addr.port().to_string(),
-        tiny_http::ListenAddr::Unix(_) => {
-            println!("Server running on Unix socket.");
-            exit(1);
+    let host = &args[1];
+    let port = &args[2];
+    let address = format!("0.0.0.0:{}", port);
+
+    let server = match Server::http(&address) {
+        Ok(server) => {
+            println!("Server running on: {}", &address);
+            server
+        }
+        Err(e) => {
+            eprintln!("Failed to bind to {}: {}", address, e);
+            exit(98);
         }
     };
-
-    let host = gethostname()
-        .to_string_lossy()
-        .split(".")
-        .next()
-        .unwrap_or("unknown")
-        .to_string();
 
     println!("Host:port {}:{}", host, port);
 
