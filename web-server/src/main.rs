@@ -1,19 +1,6 @@
-use std::process::{exit, Command};
+use gethostname::gethostname;
+use std::process::exit;
 use tiny_http::{Response, Server};
-
-fn run_script(script_path: &str) -> Result<String, String> {
-    let output = Command::new("sh")
-        .arg(script_path)
-        .output()
-        .map_err(|e| format!("Failed to run script {}", e))?;
-
-    if output.status.success() {
-        Ok(String::from_utf8_lossy(&output.stdout).to_string())
-    } else {
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        Err(format!("Script failed {}", stderr))
-    }
-}
 
 fn main() {
     let server = Server::http("0.0.0.0:0").unwrap();
@@ -27,14 +14,12 @@ fn main() {
         }
     };
 
-    let result = run_script("/share/ifi/node-info.sh");
-    let host = match result {
-        Ok(output) => output.trim().split(",").next().unwrap_or("").to_string(),
-        Err(error) => {
-            eprintln!("Error: {}", error);
-            format!("ERROR")
-        }
-    };
+    let host = gethostname()
+        .to_string_lossy()
+        .split(".")
+        .next()
+        .unwrap_or("unknown")
+        .to_string();
 
     println!("Host:port {}:{}", host, port);
 
