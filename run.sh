@@ -45,7 +45,6 @@ printf "%s\n" "${nodes[@]}" | sort -u >> "$active_nodes_file"
 # Start processes
 for i in "${!nodes[@]}"; do
     node="${nodes[$i]}"
-    echo "Processing node: $node"
     port=$(shuf -i 49152-65535 -n1)
     ports+=("$port")
 
@@ -57,7 +56,6 @@ for i in "${!nodes[@]}"; do
         ssh "$USER@$node" "chmod +x $temp_file && $temp_file $node $port; rm -f $temp_file"
     } > "${stdout_dir}/${node}" 2>&1 &
 done
-echo ""
 
 # Create and print the json output
 json_output="["
